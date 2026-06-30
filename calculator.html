@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>계산기</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      background: linear-gradient(135deg, #1e293b, #0f172a);
+      font-family: "Segoe UI", system-ui, sans-serif;
+    }
+    .calculator {
+      width: 320px;
+      background: #0f172a;
+      border-radius: 20px;
+      padding: 20px;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+    }
+    .display {
+      background: #1e293b;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 16px;
+      text-align: right;
+      color: #f8fafc;
+      min-height: 90px;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      overflow: hidden;
+    }
+    .display .history {
+      font-size: 16px;
+      color: #64748b;
+      min-height: 20px;
+      word-break: break-all;
+    }
+    .display .current {
+      font-size: 40px;
+      font-weight: 600;
+      word-break: break-all;
+    }
+    .keys {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+    }
+    button {
+      border: none;
+      border-radius: 12px;
+      padding: 18px 0;
+      font-size: 20px;
+      font-weight: 600;
+      cursor: pointer;
+      color: #f8fafc;
+      background: #334155;
+      transition: filter 0.15s, transform 0.05s;
+    }
+    button:hover { filter: brightness(1.15); }
+    button:active { transform: scale(0.95); }
+    .op { background: #475569; }
+    .equals { background: #3b82f6; }
+    .clear { background: #ef4444; }
+    .span-2 { grid-column: span 2; }
+  </style>
+</head>
+<body>
+  <div class="calculator">
+    <div class="display">
+      <div class="history" id="history"></div>
+      <div class="current" id="current">0</div>
+    </div>
+    <div class="keys">
+      <button class="clear" data-action="clear">AC</button>
+      <button class="op" data-action="delete">⌫</button>
+      <button class="op" data-value="%">%</button>
+      <button class="op" data-value="/">÷</button>
+
+      <button data-value="7">7</button>
+      <button data-value="8">8</button>
+      <button data-value="9">9</button>
+      <button class="op" data-value="*">×</button>
+
+      <button data-value="4">4</button>
+      <button data-value="5">5</button>
+      <button data-value="6">6</button>
+      <button class="op" data-value="-">−</button>
+
+      <button data-value="1">1</button>
+      <button data-value="2">2</button>
+      <button data-value="3">3</button>
+      <button class="op" data-value="+">+</button>
+
+      <button class="span-2" data-value="0">0</button>
+      <button data-value=".">.</button>
+      <button class="equals" data-action="equals">=</button>
+    </div>
+  </div>
+
+  <script>
+    const currentEl = document.getElementById("current");
+    const historyEl = document.getElementById("history");
+    let expression = "";
+
+    const symbols = { "/": "÷", "*": "×", "-": "−", "+": "+" };
+
+    function render() {
+      currentEl.textContent = expression
+        ? expression.replace(/[\/*\-+]/g, m => " " + symbols[m] + " ")
+        : "0";
+    }
+
+    function calculate() {
+      try {
+        if (!expression) return;
+        // % 를 /100 으로 변환
+        let expr = expression.replace(/(\d+\.?\d*)%/g, "($1/100)");
+        const result = Function('"use strict"; return (' + expr + ")")();
+        if (result === Infinity || isNaN(result)) {
+          historyEl.textContent = expression + " =";
+          currentEl.textContent = "오류";
+          expression = "";
+          return;
+        }
+        const rounded = Math.round(result * 1e10) / 1e10;
+        historyEl.textContent = currentEl.textContent + " =";
+        expression = String(rounded);
+        currentEl.textContent = expression;
+      } catch (e) {
+        currentEl.textContent = "오류";
+        expression = "";
+      }
+    }
+
+    document.querySelector(".keys").addEventListener("click", (e) => {
+      const btn = e.target.closest("button");
+      if (!btn) return;
+      const value = btn.dataset.value;
+      const action = btn.dataset.action;
+
+      if (action === "clear") {
+        expression = "";
+        historyEl.textContent = "";
+        render();
+      } else if (action === "delete") {
+        expression = expression.slice(0, -1);
+        render();
+      } else if (action === "equals") {
+        calculate();
+      } else if (value !== undefined) {
+        // 연산자 중복 방지
+        if (/[\/*\-+]$/.test(expression) && /[\/*\-+]/.test(value)) {
+          expression = expression.slice(0, -1) + value;
+        } else {
+          expression += value;
+        }
+        render();
+      }
+    });
+
+    // 키보드 지원
+    document.addEventListener("keydown", (e) => {
+      const k = e.key;
+      if (/[0-9.+\-*/%]/.test(k)) {
+        expression += k;
+        render();
+      } else if (k === "Enter" || k === "=") {
+        e.preventDefault();
+        calculate();
+      } else if (k === "Backspace") {
+        expression = expression.slice(0, -1);
+        render();
+      } else if (k === "Escape") {
+        expression = "";
+        historyEl.textContent = "";
+        render();
+      }
+    });
+
+    render();
+  </script>
+</body>
+</html>
